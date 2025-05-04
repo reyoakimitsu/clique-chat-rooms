@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Separator } from '@/components/ui/separator';
-import { Plus, User, MessageSquare, Settings } from 'lucide-react';
+import { Plus, User, MessageSquare, Settings, Search } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { Input } from '@/components/ui/input';
 
 interface Group {
   id: string;
@@ -25,6 +26,8 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [groups, setGroups] = useState<Group[]>(initialGroups);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleCreateGroup = () => {
     // This would open a modal in a real app
@@ -52,8 +55,72 @@ const Sidebar: React.FC = () => {
     }
   };
 
+  const toggleSearch = () => {
+    setShowSearch(!showSearch);
+    if (!showSearch) {
+      setSearchQuery('');
+    }
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      toast({
+        title: "Searching for users",
+        description: `Searching for "${searchQuery}"`,
+      });
+      // In a real app, this would perform an API call to search for users
+    }
+  };
+
   return (
     <div className="h-screen bg-clique-dark w-20 flex-shrink-0 border-r border-border flex flex-col items-center py-4">
+      {/* Search button */}
+      <div className="group flex flex-col items-center justify-center mb-2">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className={`rounded-full mb-1 ${showSearch ? 'bg-clique-purple' : 'bg-clique-purple/10 hover:bg-clique-purple/20'}`}
+          onClick={toggleSearch}
+        >
+          <Search className={`h-6 w-6 ${showSearch ? 'text-white' : 'text-clique-purple'}`} />
+        </Button>
+        <span className="text-xs text-muted-foreground group-hover:text-foreground">Search</span>
+      </div>
+
+      {/* Search overlay */}
+      {showSearch && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-start justify-center pt-24">
+          <div className="bg-card w-full max-w-md p-6 rounded-lg shadow-lg border border-border">
+            <h2 className="text-xl font-semibold mb-4">Search Users</h2>
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="flex space-x-2">
+                <Input
+                  type="text"
+                  placeholder="Enter username or email"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1"
+                  autoFocus
+                />
+                <Button type="submit" className="bg-clique-purple hover:bg-clique-purple/90">
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
+              </div>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={toggleSearch} 
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* DM section */}
       <Link to="/messages" className="group flex flex-col items-center justify-center">
         <Button variant="ghost" size="icon" className="rounded-full mb-1 bg-clique-purple/10 hover:bg-clique-purple/20">
