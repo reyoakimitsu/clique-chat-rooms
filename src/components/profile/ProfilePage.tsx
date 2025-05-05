@@ -10,9 +10,9 @@ import { useToast } from '@/components/ui/use-toast';
 const ProfilePage = () => {
   const { currentUser, updateProfile } = useAuth();
   const { toast } = useToast();
-  const [displayName, setDisplayName] = useState(currentUser?.displayName || '');
+  const [displayName, setDisplayName] = useState(currentUser?.user_metadata?.display_name || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(currentUser?.photoURL || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(currentUser?.user_metadata?.avatar_url || null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   if (!currentUser) return null;

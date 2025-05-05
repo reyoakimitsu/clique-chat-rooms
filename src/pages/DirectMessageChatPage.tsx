@@ -119,8 +119,8 @@ const DirectMessageChatPage: React.FC = () => {
           sender: msg.sender.id === "currentUser" && currentUser ? 
             { 
               id: currentUser.id, 
-              displayName: currentUser.displayName, 
-              photoURL: currentUser.photoURL 
+              displayName: currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0] || 'User', 
+              photoURL: currentUser.user_metadata?.avatar_url || null 
             } : 
             msg.sender
         })));
@@ -137,8 +137,8 @@ const DirectMessageChatPage: React.FC = () => {
       content,
       sender: {
         id: currentUser.id,
-        displayName: currentUser.displayName,
-        photoURL: currentUser.photoURL,
+        displayName: currentUser.user_metadata?.display_name || currentUser.email?.split('@')[0] || 'User',
+        photoURL: currentUser.user_metadata?.avatar_url || null,
       },
       timestamp: new Date(),
     };
