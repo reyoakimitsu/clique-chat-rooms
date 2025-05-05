@@ -18,10 +18,7 @@ export const useStartConversation = (onClose: () => void) => {
     try {
       // First, check if a conversation already exists
       const { data: existingConversation, error: fetchError } = await supabase
-        .rpc('find_or_create_conversation', { other_user_id: userId }) as { 
-          data: ConversationResult | null; 
-          error: any;
-        };
+        .rpc('find_or_create_conversation', { other_user_id: userId });
 
       if (fetchError) throw fetchError;
 
