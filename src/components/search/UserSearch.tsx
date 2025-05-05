@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { useNavigate } from 'react-router-dom';
 import UserSearchHeader from './UserSearchHeader';
 import UserSearchInput from './UserSearchInput';
 import UserSearchResults from './UserSearchResults';
+import { useStartConversation } from '@/hooks/useStartConversation';
 
 interface UserResult {
   id: string;
@@ -13,10 +13,6 @@ interface UserResult {
   display_name: string;
   avatar_url: string | null;
   last_online: string | null;
-}
-
-interface ConversationResult {
-  id: string;
 }
 
 interface UserSearchProps {
@@ -28,7 +24,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onClose }) => {
   const [results, setResults] = useState<UserResult[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const { startConversation, loading: conversationLoading } = useStartConversation(onClose);
 
   useEffect(() => {
     if (query.trim().length >= 2) {
@@ -58,68 +54,6 @@ const UserSearch: React.FC<UserSearchProps> = ({ onClose }) => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const startConversation = async (userId: string) => {
-    try {
-      // First, check if a conversation already exists
-      const { data: existingConversations, error: fetchError } = await supabase
-        .rpc('find_or_create_conversation', { other_user_id: userId });
-
-      if (fetchError) throw fetchError;
-
-      if (existingConversations && existingConversations.length > 0) {
-        navigate(`/messages/${existingConversations[0].id}`);
-        onClose();
-        return;
-      }
-
-      // If no conversation exists, create one
-      const { data: newConversation, error: createError } = await supabase
-        .from('conversations')
-        .insert({})
-        .select('id')
-        .single();
-
-      if (createError) throw createError;
-
-      const conversationId = newConversation.id;
-
-      // Get current user
-      const { data: userData } = await supabase.auth.getUser();
-      const currentUserId = userData.user?.id;
-
-      // Add both users to the conversation
-      const { error: participantError } = await supabase
-        .from('conversation_participants')
-        .insert([
-          {
-            conversation_id: conversationId,
-            profile_id: currentUserId,
-          },
-          {
-            conversation_id: conversationId,
-            profile_id: userId,
-          },
-        ]);
-
-      if (participantError) throw participantError;
-
-      toast({
-        title: 'Conversation started',
-        description: 'You can now send messages to this user.',
-      });
-
-      navigate(`/messages/${conversationId}`);
-      onClose();
-    } catch (error) {
-      console.error('Error starting conversation:', error);
-      toast({
-        title: 'Error starting conversation',
-        description: 'Failed to start a conversation with this user.',
-        variant: 'destructive',
-      });
     }
   };
 
@@ -154,7 +88,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onClose }) => {
         <UserSearchResults
           query={query}
           results={results}
-          loading={loading}
+          loading={loading || conversationLoading}
           formatLastOnline={formatLastOnline}
           onSelectUser={startConversation}
         />
