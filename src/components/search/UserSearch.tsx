@@ -83,13 +83,17 @@ const UserSearch: React.FC<UserSearchProps> = ({ onClose }) => {
 
       const conversationId = newConversation.id;
 
+      // Get current user
+      const { data: userData } = await supabase.auth.getUser();
+      const currentUserId = userData.user?.id;
+
       // Add both users to the conversation
       const { error: participantError } = await supabase
         .from('conversation_participants')
         .insert([
           {
             conversation_id: conversationId,
-            profile_id: (await supabase.auth.getUser()).data.user?.id,
+            profile_id: currentUserId,
           },
           {
             conversation_id: conversationId,
