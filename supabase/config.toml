@@ -1,1 +1,5 @@
+
 project_id = "rcrwuzjfigmvpwrxzveo"
+
+[functions.find_or_create_conversation]
+verify_jwt = true

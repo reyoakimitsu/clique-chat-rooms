@@ -1,114 +1,190 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
+import { toast } from '@/components/ui/use-toast';
 
 // Define types for our auth context
-interface User {
-  id: string;
-  email: string;
-  displayName: string;
-  photoURL: string | null;
-}
-
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateProfile: (data: Partial<User>) => Promise<void>;
+  updateProfile: (data: { displayName?: string; photoURL?: string }) => Promise<void>;
   isAuthenticated: boolean;
+  session: Session | null;
 }
 
 // Create the context with a default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock authentication for now (will be replaced with Firebase/Convex)
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check for existing session
   useEffect(() => {
-    const storedUser = localStorage.getItem('clique_user');
-    if (storedUser) {
-      try {
-        setCurrentUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Failed to parse stored user:', error);
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        setSession(currentSession);
+        setCurrentUser(currentSession?.user ?? null);
+        
+        if (event === 'SIGNED_IN') {
+          toast({
+            title: 'Signed in',
+            description: 'You have successfully signed in.',
+          });
+        } else if (event === 'SIGNED_OUT') {
+          toast({
+            title: 'Signed out',
+            description: 'You have been signed out.',
+          });
+        }
       }
-    }
-    setLoading(false);
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setCurrentUser(currentSession?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  // Mock sign in function
   const signIn = async (email: string, password: string) => {
     setLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For demo, we'll create a mock user
-    const mockUser: User = {
-      id: `user_${Math.random().toString(36).substring(2, 9)}`,
-      email: email,
-      displayName: email.split('@')[0],
-      photoURL: null
-    };
-    
-    setCurrentUser(mockUser);
-    localStorage.setItem('clique_user', JSON.stringify(mockUser));
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        toast({
+          title: 'Sign in failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        throw error;
+      }
+      
+      // The session will be updated by onAuthStateChange
+    } catch (error) {
+      console.error('Sign in error:', error);
+      setLoading(false);
+      throw error;
+    }
   };
 
-  // Mock sign up function
   const signUp = async (email: string, password: string, displayName: string) => {
     setLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Create a mock user
-    const mockUser: User = {
-      id: `user_${Math.random().toString(36).substring(2, 9)}`,
-      email: email,
-      displayName: displayName || email.split('@')[0],
-      photoURL: null
-    };
-    
-    setCurrentUser(mockUser);
-    localStorage.setItem('clique_user', JSON.stringify(mockUser));
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName,
+          },
+        },
+      });
+      
+      if (error) {
+        toast({
+          title: 'Sign up failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        throw error;
+      }
+      
+      toast({
+        title: 'Account created',
+        description: 'Your account has been created successfully.',
+      });
+      
+      // The session will be updated by onAuthStateChange
+    } catch (error) {
+      console.error('Sign up error:', error);
+      setLoading(false);
+      throw error;
+    }
   };
 
-  // Mock sign out function
   const signOut = async () => {
     setLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    setCurrentUser(null);
-    localStorage.removeItem('clique_user');
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        toast({
+          title: 'Sign out failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        throw error;
+      }
+      
+      // The session will be updated by onAuthStateChange
+    } catch (error) {
+      console.error('Sign out error:', error);
+      setLoading(false);
+      throw error;
+    }
   };
 
-  // Mock update profile function
-  const updateProfile = async (data: Partial<User>) => {
+  const updateProfile = async (data: { displayName?: string; photoURL?: string }) => {
     if (!currentUser) return;
     
     setLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const updatedUser = {
-      ...currentUser,
-      ...data
-    };
-    
-    setCurrentUser(updatedUser);
-    localStorage.setItem('clique_user', JSON.stringify(updatedUser));
-    setLoading(false);
+    try {
+      // Update auth metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          display_name: data.displayName,
+          avatar_url: data.photoURL,
+        },
+      });
+      
+      if (updateError) throw updateError;
+
+      // Update profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          display_name: data.displayName,
+          avatar_url: data.photoURL,
+        })
+        .eq('id', currentUser.id);
+
+      if (profileError) throw profileError;
+
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been updated successfully.',
+      });
+      
+      // Refresh user data
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      setSession(currentSession);
+      setCurrentUser(currentSession?.user ?? null);
+      
+    } catch (error) {
+      console.error('Update profile error:', error);
+      toast({
+        title: 'Profile update failed',
+        description: 'Failed to update your profile.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const value = {
@@ -118,7 +194,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     signUp,
     signOut,
     updateProfile,
-    isAuthenticated: !!currentUser
+    isAuthenticated: !!currentUser,
+    session,
   };
 
   return (
