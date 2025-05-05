@@ -17,13 +17,13 @@ export const useStartConversation = (onClose: () => void) => {
     setLoading(true);
     try {
       // First, check if a conversation already exists
-      const { data: existingConversations, error: fetchError } = await supabase
-        .rpc<ConversationResult>('find_or_create_conversation', { other_user_id: userId });
+      const { data: existingConversation, error: fetchError } = await supabase
+        .rpc<ConversationResult, { other_user_id: string }>('find_or_create_conversation', { other_user_id: userId });
 
       if (fetchError) throw fetchError;
 
-      if (existingConversations && existingConversations.length > 0) {
-        navigate(`/messages/${existingConversations[0].id}`);
+      if (existingConversation) {
+        navigate(`/messages/${existingConversation.id}`);
         onClose();
         return;
       }
