@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Loader2, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import UserSearchHeader from './UserSearchHeader';
+import UserSearchInput from './UserSearchInput';
+import UserSearchResults from './UserSearchResults';
 
 interface UserResult {
   id: string;
@@ -66,7 +65,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onClose }) => {
     try {
       // First, check if a conversation already exists
       const { data: existingConversations, error: fetchError } = await supabase
-        .rpc<ConversationResult[], {}>('find_or_create_conversation', { other_user_id: userId });
+        .rpc('find_or_create_conversation', { other_user_id: userId });
 
       if (fetchError) throw fetchError;
 
@@ -144,65 +143,21 @@ const UserSearch: React.FC<UserSearchProps> = ({ onClose }) => {
 
   return (
     <div className="w-full max-w-md bg-background border border-border rounded-lg shadow-lg">
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <h2 className="text-lg font-semibold">Search Users</h2>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+      <UserSearchHeader onClose={onClose} />
       
       <div className="p-4">
-        <Input
-          type="text"
-          placeholder="Search by username or display name..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="mb-4"
-          autoFocus
+        <UserSearchInput 
+          query={query}
+          onChange={setQuery}
         />
         
-        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-          {loading ? (
-            <div className="flex items-center justify-center p-4">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : results.length === 0 ? (
-            query.trim().length >= 2 ? (
-              <div className="text-center p-4 text-muted-foreground">
-                No users found matching "{query}"
-              </div>
-            ) : query.trim().length > 0 ? (
-              <div className="text-center p-4 text-muted-foreground">
-                Type at least 2 characters to search
-              </div>
-            ) : null
-          ) : (
-            results.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center p-2 rounded-md hover:bg-accent cursor-pointer"
-                onClick={() => startConversation(user.id)}
-              >
-                <Avatar className="h-10 w-10 mr-3">
-                  {user.avatar_url ? (
-                    <AvatarImage src={user.avatar_url} />
-                  ) : (
-                    <AvatarFallback>
-                      {user.display_name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <div className="flex-1">
-                  <div className="font-medium">{user.display_name}</div>
-                  <div className="text-xs text-muted-foreground">@{user.username}</div>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {formatLastOnline(user.last_online)}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <UserSearchResults
+          query={query}
+          results={results}
+          loading={loading}
+          formatLastOnline={formatLastOnline}
+          onSelectUser={startConversation}
+        />
       </div>
     </div>
   );
