@@ -16,6 +16,10 @@ interface UserResult {
   last_online: string | null;
 }
 
+interface ConversationResult {
+  id: string;
+}
+
 interface UserSearchProps {
   onClose: () => void;
 }
@@ -62,7 +66,7 @@ const UserSearch: React.FC<UserSearchProps> = ({ onClose }) => {
     try {
       // First, check if a conversation already exists
       const { data: existingConversations, error: fetchError } = await supabase
-        .rpc('find_or_create_conversation', { other_user_id: userId });
+        .rpc<ConversationResult>('find_or_create_conversation', { other_user_id: userId });
 
       if (fetchError) throw fetchError;
 
